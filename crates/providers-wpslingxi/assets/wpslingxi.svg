@@ -1,0 +1,7 @@
+<!-- Original geometric mark for the WPS 灵犀 plugin (not a brand asset). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24">
+  <title>WPS 灵犀</title>
+  <rect x="1" y="1" width="22" height="22" rx="6" fill="#2563eb"/>
+  <path d="M7 7h10M7 12h7M7 17h10" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="17.4" cy="12" r="2.1" fill="#fbbf24"/>
+</svg>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meoo 秒悟</title>
+<!--
+  Meoo 插件自有页面。
+
+  为什么要有这一页：网关的「添加账号」弹窗按内置家清单渲染
+  （BUILTIN_CONFIGS），第三方插件家的 id 不在那张表里，弹窗只显示
+  「账号添加功能即将上线」。所以浏览器授权登录、手填 AK、签到、模型清单
+  都做成本页，只调网关的 /api/*，由插件进程代打 Meoo 上游。
+
+  页面保持无构建步骤（原生 ES module）：插件包是静态资源，多一个 npm
+  产物就多一层「升级时忘打包」的风险。
+-->
+<link rel="stylesheet" href="/plugins/runtime/theme.css">
+<link rel="stylesheet" href="/plugins/runtime/islands/ui.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div class="lx-shell">
+  <header class="lx-head">
+    <div>
+      <h1>Meoo 秒悟</h1>
+      <p class="lx-sub">模型目录 · 积分余额 · 每日登录赠积分。用官方 OAuth 授权登录，或手填项目服务 AK；对话走 AI 网关的 OpenAI 兼容层。</p>
+    </div>
+    <button class="lx-btn" id="reload">刷新</button>
+  </header>
+
+  <!-- ── 添加账号 ───────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>添加账号 <span class="lx-count" id="account-count"></span></h2>
+    <p class="lx-hint">
+      点下面的按钮会打开 <strong>Meoo 官方授权页</strong>（系统默认浏览器），登录并点一次「授权」；
+      浏览器会自动跳回本机回调，插件收下账号与项目服务 AK。走的是官方 OAuth PKCE，
+      <strong>不读取你浏览器的 Cookie</strong>，也不需要 F12 复制任何东西。
+      授权完成后浏览器标签页可以直接关掉。
+    </p>
+    <div class="lx-login">
+      <button class="lx-btn lx-btn-primary lx-btn-lg" id="browser-login">打开浏览器登录</button>
+      <button class="lx-btn" id="browser-login-cancel" hidden>取消登录</button>
+    </div>
+    <div class="lx-login-status" id="login-status" hidden>
+      <span class="lx-spinner" aria-hidden="true"></span>
+      <span id="login-hint">正在启动登录…</span>
+    </div>
+    <div class="lx-auth-fallback" id="authorize-link" hidden>
+      <p class="lx-hint">
+        浏览器没自动打开？<a id="authorize-url" href="#" target="_blank" rel="noopener noreferrer">点这里重新用系统浏览器打开授权页</a>，
+        或复制下面的地址粘贴到任意浏览器（授权完成后会自动跳回本机，账号由插件收下）。
+      </p>
+      <div class="lx-auth-url">
+        <code id="authorize-text"></code>
+        <button class="lx-btn" type="button" id="copy-authorize">复制地址</button>
+      </div>
+    </div>
+
+    <details class="lx-details" id="manual-details">
+      <summary>手动填写项目服务 AK（无浏览器环境时兜底）</summary>
+      <p class="lx-hint">
+        粘贴 <code>meoo_project_service_v1.…</code>，或 Meoo CLI 导出的凭证 JSON。
+        只有 AK 的账号<strong>可以聊天、拉模型目录，但查不了积分也签不了到</strong>：
+        控制面要的是 OAuth access token，两套鉴权不能互换。AK 只保存在网关账号库里，
+        界面只显示末四位。
+      </p>
+      <label class="lx-field">
+        <span>项目服务 AK / 凭证 JSON</span>
+        <textarea id="ak" rows="3" spellcheck="false" placeholder="meoo_project_service_v1.…"></textarea>
+      </label>
+      <div class="lx-grid">
+        <label class="lx-field">
+          <span>备注名（可选）</span>
+          <input id="name" autocomplete="off" placeholder="例如：主账号">
+        </label>
+        <button class="lx-btn lx-btn-primary" id="add">添加账号</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── 账号与签到 ─────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>账号与签到</h2>
+    <p class="lx-hint">
+      Meoo <strong>没有独立签到接口</strong>：官方文档说「所有用户每日首次登录系统，均可免费获赠 2000 积分」。
+      插件做一次登录续期，再用<strong>领前 / 领后积分余额差</strong>确认是否真的到账；余额没涨但权益有效会报「今日已领」，
+      连余额都读不到则明确报失败 —— 不把 HTTP 200 当成功。也可在网关「签到中心」里批量与定时签到。
+    </p>
+    <div class="lx-list" id="accounts"></div>
+  </section>
+
+  <!-- ── 模型清单 ───────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>
+      模型清单
+      <span class="lx-count" id="model-count"></span>
+      <button class="lx-btn lx-right" id="refresh-models">刷新模型清单</button>
+    </h2>
+    <p class="lx-hint" id="model-hint">—</p>
+    <div class="lx-chips" id="models"></div>
+  </section>
+
+  <p class="lx-foot">
+    Meoo 秒悟插件 · 对话由网关直发 <code>api.meoo.host</code> 的 OpenAI 兼容层（Bearer = 项目服务 AK），
+    控制面用 OAuth access token；插件不中转流式响应。首次拉目录需要账号里的 AK 或 OAuth 登录态。
+  </p>
+</div>
+<div class="lx-toast" id="toast" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenCode 账号</title>
+<!--
+  OpenCode 账号页（插件自有页面）。
+
+  ── 为什么要有这一页 ──────────────────────────────────────────
+  网关的「添加账号」弹窗按**内置家清单**渲染，插件家的 id 不在那张表里，
+  弹窗只会显示「账号添加功能即将上线」。所以把「粘贴 Key → 选通道 → 添加」
+  做成自带页面。加完的账号与内置家完全同权（选路、限额、转发走同一张表）。
+
+  ── 两家 provider ───────────────────────────────────────────
+  · opencode-local：本机桌面端 v2 API，多步会话，稳定可用（推荐）；
+  · opencode：云端 inference 匿名车道，或 Zen / Go Key（v1 / v2 请求形状）。
+
+  ── 数据从哪来 ──────────────────────────────────────────────
+  只调网关的 `/api/*`：`/api/accounts` 加 / 删、`/api/session` 读列表、
+  `/api/models/*` 刷新目录。页面不直接连 opencode.ai（上游不给浏览器 CORS，
+  探活由插件进程完成）。
+
+  页面保持**无构建步骤**（原生 ES module）：插件包要能被任意网关装载的
+  静态资源，多一个 npm 产物就多一层「升级时忘打包」的风险。
+-->
+<link rel="stylesheet" href="/plugins/runtime/theme.css">
+<link rel="stylesheet" href="/plugins/runtime/islands/ui.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div class="oc-shell">
+  <header class="oc-head">
+    <div>
+      <h1>OpenCode</h1>
+      <p class="oc-sub">把 OpenCode 的免费模型暴露为标准 OpenAI 接口：推荐走本机服务（实测稳定可用），云端匿名通道作为备用。</p>
+    </div>
+    <button class="oc-btn" id="reload">刷新</button>
+  </header>
+
+  <!-- ── 本机服务（推荐） ───────────────────────────────────── -->
+  <section class="oc-card">
+    <h2>连接本机 OpenCode 服务 <span class="oc-count">推荐</span></h2>
+    <p class="oc-hint">
+      桌面端「设置 → 服务器」里那个连接地址（<code>http://127.0.0.1:端口</code>）就是本机 v2 API。
+      插件会自动读取 <code>~/.local/state/opencode/service.json</code> 里的地址与密码，
+      所以通常直接点「自动发现并连接」即可；端口每次启动都会变，<strong>不要写死</strong>。
+      这条链路走的是本机客户端自己的会话，实测不受云端匿名额度限制。
+    </p>
+
+    <div class="oc-grid">
+      <label class="oc-field">
+        <span>服务地址（可选）</span>
+        <input id="local-url" spellcheck="false" placeholder="留空自动发现，或填 http://127.0.0.1:28894">
+      </label>
+      <label class="oc-field oc-field-narrow">
+        <span>服务密码（可选）</span>
+        <input id="local-password" autocomplete="off" spellcheck="false" placeholder="留空自动读取">
+      </label>
+      <label class="oc-field oc-field-narrow">
+        <span>备注名（可选）</span>
+        <input id="local-name" placeholder="留空自动命名">
+      </label>
+    </div>
+
+    <div class="oc-grid">
+      <button class="oc-btn oc-btn-primary" id="add-local">自动发现并连接</button>
+    </div>
+
+    <p class="oc-hint">
+      前提：opencode 桌面端或 <code>opencode serve</code> 正在运行。连接成功后在
+      「模型 / 提供商」里选 <code>opencode-local</code> 这一家。
+    </p>
+  </section>
+
+  <!-- ── 云端直连（备用） ───────────────────────────────────── -->
+  <section class="oc-card">
+    <h2>云端直连 <span class="oc-count">备用</span></h2>
+    <p class="oc-hint">
+      匿名车道不需要 Key，但上游按出口 IP 计免费额度，耗尽后返回
+      <code>429 FreeUsageLimitError</code>（换账号无效，通常要等十几小时）。
+      想用自己的 Zen / Go Key 提高额度或换通道，在下方手工粘贴即可（Key 优先）。
+      模型清单现在直接取自该通道的 <code>/v1/models</code>，不再混入上游不存在的模型。
+    </p>
+
+    <div class="oc-grid">
+      <button class="oc-btn" id="use-local">匿名免费使用（无需登录）</button>
+      <label class="oc-field oc-field-narrow">
+        <span>Key 通道（仅填 Key 时生效）</span>
+        <select id="tier">
+          <option value="zen">Zen（默认）</option>
+          <option value="go">Go（套餐）</option>
+        </select>
+      </label>
+      <label class="oc-field">
+        <span>备注名（可选）</span>
+        <input id="name" placeholder="留空自动命名">
+      </label>
+    </div>
+
+    <details class="oc-details">
+      <summary>可选：手工粘贴 API Key（覆盖匿名通道）</summary>
+      <p class="oc-hint">
+        Key 在 <code>opencode.ai/auth</code> 创建。填写后点「添加 Key」，请求会走所选 Key 通道。
+        本插件只代理免费模型，付费模型请求会被拒绝。
+      </p>
+      <div class="oc-grid">
+        <label class="oc-field">
+          <span>API Key</span>
+          <input id="api-key" autocomplete="off" spellcheck="false" placeholder="sk-...">
+        </label>
+        <button class="oc-btn" id="add">添加 Key</button>
+      </div>
+      <label class="oc-field">
+        <span>自定义上游基址（可选）</span>
+        <input id="base-url" spellcheck="false" placeholder="https://opencode.ai/zen">
+      </label>
+      <p class="oc-hint">
+        基址写到通道根为止（<code>…/zen</code> 或 <code>…/zen/go</code>），
+        <strong>不要</strong>带 <code>/v1</code>。留空 = 官方地址。
+      </p>
+    </details>
+  </section>
+
+  <!-- ── 账号列表 ───────────────────────────────────────────── -->
+  <section class="oc-card">
+    <h2>账号 <span class="oc-count" id="account-count"></span></h2>
+    <div id="accounts" class="oc-list"></div>
+  </section>
+
+  <!-- ── 模型清单 ───────────────────────────────────────────── -->
+  <section class="oc-card">
+    <h2>
+      模型 <span class="oc-count" id="model-count"></span>
+      <button class="oc-btn oc-btn-ghost oc-right" id="refresh-models">刷新模型清单</button>
+    </h2>
+    <p class="oc-hint" id="model-hint"></p>
+    <div id="models" class="oc-chips"></div>
+  </section>
+
+  <div class="oc-toast" id="toast" hidden></div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

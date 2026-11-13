@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WPS 灵犀</title>
+<!--
+  WPS 灵犀插件自有页面。
+
+  为什么要有这一页：网关 3.3.0 的「添加账号」弹窗按内置家清单渲染
+  （BUILTIN_CONFIGS），第三方插件家的 id 不在那张表里，弹窗只显示
+  「账号添加功能即将上线」。所以浏览器登录、添加账号、签到、模型清单都做成本页，
+  只调网关的 /api/*，由插件进程代打 WPS 上游（浏览器不能带 Cookie 跨域）。
+
+  页面保持无构建步骤（原生 ES module）：插件包是静态资源，多一个 npm
+  产物就多一层「升级时忘打包」的风险。
+-->
+<link rel="stylesheet" href="/plugins/runtime/theme.css">
+<link rel="stylesheet" href="/plugins/runtime/islands/ui.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div class="lx-shell">
+  <header class="lx-head">
+    <div>
+      <h1>WPS 灵犀</h1>
+      <p class="lx-sub">模型代理 · 智点余额 · 每日签到。支持打开浏览器一键登录；上游没有续期接口，登录态失效后重新登录即可。</p>
+    </div>
+    <button class="lx-btn" id="reload">刷新</button>
+  </header>
+
+  <!-- ── 添加账号 ───────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>添加账号 <span class="lx-count" id="account-count"></span></h2>
+    <p class="lx-hint">
+      点下面的按钮会打开一个<strong>独立的 Chrome / Edge 窗口</strong>，用微信扫码或手机号登录 WPS 账号；
+      登录完成后插件会自动读取 <code>wps_sid</code> 并收下账号，<strong>不用 F12 复制 Cookie</strong>。
+      该窗口使用临时配置目录，不读取也不写入你日常浏览器的登录态，完成后自动关闭。
+    </p>
+    <div class="lx-login">
+      <button class="lx-btn lx-btn-primary lx-btn-lg" id="browser-login">打开浏览器登录</button>
+      <button class="lx-btn" id="browser-login-cancel" hidden>取消登录</button>
+    </div>
+    <div class="lx-login-status" id="login-status" hidden>
+      <span class="lx-spinner" aria-hidden="true"></span>
+      <span id="login-hint">正在启动浏览器…</span>
+    </div>
+
+    <details class="lx-details" id="manual-details">
+      <summary>手动粘贴 Cookie（无浏览器环境时兜底）</summary>
+      <p class="lx-hint">
+        打开 <code>lingxi.kdocs.cn</code> 并登录 → F12 → Network → 找到 <code>tasks</code> 请求 →
+        右键「复制 cURL」→ 把整段 <code>Cookie</code> 粘到下面。也支持只粘 <code>wps_sid=…</code> 或裸 sid。
+        Cookie 等于账号登录态，仅保存在网关账号库里；社区实测有效期约 30 天，且签到接口不会自动续期。
+      </p>
+      <label class="lx-field">
+        <span>Cookie / wps_sid</span>
+        <textarea id="cookie" rows="3" spellcheck="false" placeholder="Cookie: wps_sid=…; uid=…; …"></textarea>
+      </label>
+      <div class="lx-grid">
+        <label class="lx-field">
+          <span>uid（可选，用于稳定去重）</span>
+          <input id="uid" autocomplete="off" placeholder="留空时插件会尝试从上游资料接口补全">
+        </label>
+        <label class="lx-field">
+          <span>备注名（可选）</span>
+          <input id="name" autocomplete="off" placeholder="例如：主账号">
+        </label>
+        <button class="lx-btn lx-btn-primary" id="add">添加账号</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── 账号与签到 ─────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>账号与签到</h2>
+    <p class="lx-hint">
+      「签到」调任务中心 <code>daily_check_in</code>。插件会先读今日状态，再按领前/领后智点余额差与状态回查确认到账，
+      不会把上游的 HTTP 200 假成功当成已领。也可在网关「签到中心」里批量与定时签到。
+    </p>
+    <div class="lx-list" id="accounts"></div>
+  </section>
+
+  <!-- ── 模型清单 ───────────────────────────────────────────── -->
+  <section class="lx-card">
+    <h2>
+      模型清单
+      <span class="lx-count" id="model-count"></span>
+      <button class="lx-btn lx-right" id="refresh-models">刷新模型清单</button>
+    </h2>
+    <p class="lx-hint" id="model-hint">—</p>
+    <div class="lx-chips" id="models"></div>
+  </section>
+
+  <p class="lx-foot">
+    WPS 灵犀插件 · 上游协议为私有 agent-runtime 通道，模型按 run 计费；插件按「账号 × 模型」缓存 run 一小时以避免重复扣智点。
+  </p>
+</div>
+<div class="lx-toast" id="toast" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

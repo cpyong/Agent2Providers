@@ -1,0 +1,36 @@
+{
+  "id": "agent2api-meoo",
+  "name": "Meoo 秒悟 提供商",
+  "description": "为 Agent2API 接入 Meoo 秒悟：浏览器 OAuth 授权登录、拉取官方 AI 网关模型目录与对话转发，并提供每日登录赠积分的签到与余额查询。签到按余额差与权益确认，不把 HTTP 200 当作到账。",
+  "license": "AGPL-3.0",
+  "version": "0.1.1",
+  "protocol": 1,
+  "providers": [
+    {
+      "id": "meoo",
+      "label": "Meoo 秒悟",
+      "order": 0,
+      "default_enabled": true
+    }
+  ],
+  "icons": "assets",
+  "ui": [
+    {
+      "id": "meoo",
+      "title": "Meoo 秒悟",
+      "icon": "meoo",
+      "entry": "meoo/index.html",
+      "group": "g-overview",
+      "order": 40
+    }
+  ],
+  "entry": {
+    "x86_64-pc-windows-msvc": "bin/agent2api-meoo.exe",
+    "x86_64-pc-windows-gnu": "bin/agent2api-meoo.exe",
+    "x86_64-unknown-linux-gnu": "bin/agent2api-meoo",
+    "aarch64-unknown-linux-gnu": "bin/agent2api-meoo",
+    "x86_64-apple-darwin": "bin/agent2api-meoo",
+    "aarch64-apple-darwin": "bin/agent2api-meoo"
+  },
+  "homepage": "https://github.com/ProvidersPlugin/Agent2Providers"
+}

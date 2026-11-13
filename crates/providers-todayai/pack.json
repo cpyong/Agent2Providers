@@ -1,0 +1,33 @@
+{
+  "id": "agent2api-todayai",
+  "name": "Today AI 提供商",
+  "description": "Today AI（todayai.cn）提供商：手机号 + 短信验证码登录、访问令牌自动续期、模型目录与转发（每次请求一个独立助理会话，不碰主会话）。不含签到。",
+  "license": "AGPL-3.0",
+  "version": "0.1.5",
+  "protocol": 1,
+  "providers": [
+    {
+      "id": "todayai",
+      "label": "Today AI",
+      "order": 0,
+      "default_enabled": true
+    }
+  ],
+  "ui": [
+    {
+      "id": "todayai",
+      "title": "Today AI 账号",
+      "entry": "todayai/index.html",
+      "group": "g-overview",
+      "order": 10
+    }
+  ],
+  "entry": {
+    "x86_64-pc-windows-msvc": "bin/agent2api-todayai.exe",
+    "x86_64-unknown-linux-gnu": "bin/agent2api-todayai",
+    "aarch64-unknown-linux-gnu": "bin/agent2api-todayai",
+    "x86_64-apple-darwin": "bin/agent2api-todayai",
+    "aarch64-apple-darwin": "bin/agent2api-todayai"
+  },
+  "homepage": "https://github.com/ProvidersPlugin/Agent2Providers"
+}

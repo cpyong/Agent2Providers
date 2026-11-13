@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/providers", "crates/provider-protocol", "crates/provider-sdk"]
+members = ["crates/providers", "crates/providers-todayai", "crates/providers-opencode", "crates/providers-wpslingxi", "crates/providers-meoo", "crates/provider-protocol", "crates/provider-sdk"]
 
 # ── 这个 workspace 是什么 ─────────────────────────────────────
 # 提供商插件的**独立仓库**。网关（aimod-cc/Agent2API）只依赖这里发布的

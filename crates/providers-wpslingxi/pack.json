@@ -1,0 +1,36 @@
+{
+  "id": "agent2api-wpslingxi",
+  "name": "WPS 灵犀 提供商",
+  "description": "WPS 灵犀（lingxi.wps.cn / lingxi.kdocs.cn）独立插件：可打开独立 Chrome/Edge 窗口登录 WPS 账号并自动读取 wps_sid（也支持手动粘贴 Cookie 兜底），走 cowork agent-runtime 私有 SSE 通道代理模型对话，支持上游模型目录、智点余额、每日签到（任务中心 daily_check_in，按状态回查 + 余额差确认到账，不把 HTTP 200 当成功）。",
+  "license": "AGPL-3.0",
+  "version": "0.1.1",
+  "protocol": 1,
+  "providers": [
+    {
+      "id": "wpslingxi",
+      "label": "WPS 灵犀",
+      "order": 0,
+      "default_enabled": true
+    }
+  ],
+  "ui": [
+    {
+      "id": "wpslingxi",
+      "title": "WPS 灵犀",
+      "icon": "wpslingxi",
+      "entry": "wpslingxi/index.html",
+      "group": "g-overview",
+      "order": 30
+    }
+  ],
+  "icons": "assets",
+  "entry": {
+    "x86_64-pc-windows-msvc": "bin/agent2api-wpslingxi.exe",
+    "x86_64-pc-windows-gnu": "bin/agent2api-wpslingxi.exe",
+    "x86_64-unknown-linux-gnu": "bin/agent2api-wpslingxi",
+    "aarch64-unknown-linux-gnu": "bin/agent2api-wpslingxi",
+    "x86_64-apple-darwin": "bin/agent2api-wpslingxi",
+    "aarch64-apple-darwin": "bin/agent2api-wpslingxi"
+  },
+  "homepage": "https://github.com/ProvidersPlugin/Agent2Providers"
+}

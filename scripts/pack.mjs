@@ -28,7 +28,13 @@
  * node scripts/pack.mjs --target <三元组>      # 打指定平台（需已交叉编好）
  * node scripts/pack.mjs --skip-build          # 不重编，直接打现有二进制
  * node scripts/pack.mjs --out /tmp            # 指定输出目录
+ * node scripts/pack.mjs --pack crates/providers-todayai \
+ *      --crate agent2api-providers-todayai     # 打一个子目录里的独立包
  * ```
+ *
+ * 默认（不带 `--pack`）打仓库根目录的合集包；`--pack` 指向另一个含
+ * `pack.json` 的目录时，图标 / 页面 / 清单一律相对该目录解析，而 cargo
+ * 仍在工作区根目录跑（`target/` 只有一份）。
  *
  * 退出码：0 = 成功；1 = 失败（二进制不存在 / pack.json 与目标平台对不上）。
  */
@@ -59,12 +65,13 @@ function hostTriple() {
   }
 }
 
-/** 目标平台的入口二进制名（Windows 带 .exe）。
+/** 目标平台的入口二进制扩展名（Windows 带 `.exe`）。
  *
- *  按 **target** 判断而不是宿主：交叉编译时两者不同（在 Linux 上打 Windows 包
- *  会去找 `.exe`，而宿主的 `process.platform` 给不出这个信息）。 */
-function binaryName(target) {
-  return target.includes('windows') ? 'agent2api-providers.exe' : 'agent2api-providers'
+ *  按 **target** 判断而不是宿主：交叉编译时两者不同。基名以 `pack.json`
+ *  的 `entry` 为准 —— 各包可以有自己的二进制名（合集包是
+ *  `agent2api-providers`，独立包是 `agent2api-todayai`）。 */
+function expectedExtension(target) {
+  return target.includes('windows') ? '.exe' : ''
 }
 
 /**
@@ -78,7 +85,7 @@ function binaryName(target) {
  * 目录不存在时**不报错**：`icons` 是可选字段，写了但目录还没建只说明这一版
  * 没带图标，界面回落字母即可 —— 为一张图标让整个打包失败不值得。
  */
-function collectDir(field, dir) {
+function collectDir(field, dir, base = PLUGIN_DIR) {
   if (!dir) return []
   if (dir.startsWith('/') || dir.startsWith('\\') || /^[a-zA-Z]:/.test(dir)) {
     throw new Error(`pack.json 的 ${field} 必须是相对路径（${dir}）`)
@@ -86,7 +93,7 @@ function collectDir(field, dir) {
   if (dir.split(/[\\/]/).includes('..')) {
     throw new Error(`pack.json 的 ${field} 不能包含 ..（${dir}）`)
   }
-  const root = join(PLUGIN_DIR, dir)
+  const root = join(base, dir)
   if (!existsSync(root) || !statSync(root).isDirectory()) return []
 
   const files = []
@@ -98,7 +105,7 @@ function collectDir(field, dir) {
         walk(full)
       } else if (item.isFile()) {
         // zip 条目名用正斜杠，且相对于包根（与 `icons` 字段的语义一致）
-        const name = relative(PLUGIN_DIR, full).split('\\').join('/')
+        const name = relative(base, full).split('\\').join('/')
         files.push({ name, data: readFileSync(full), executable: false })
       }
     }
@@ -108,8 +115,8 @@ function collectDir(field, dir) {
 }
 
 /** 图标目录（`pack.json` 的 `icons` 字段）。 */
-function collectIcons(manifest) {
-  return collectDir('icons', manifest.icons)
+function collectIcons(manifest, base) {
+  return collectDir('icons', manifest.icons, base)
 }
 
 /**
@@ -127,7 +134,7 @@ function collectIcons(manifest) {
  * 额外的判据来自网关侧：`ui` 页面的 `entry` 必须以 `.html` 结尾、不含 `..` ——
  * 这里同步挡一遍，让「打出来的包装不上」提前到打包时暴露。
  */
-function collectUi(manifest) {
+function collectUi(manifest, base) {
   const pages = Array.isArray(manifest.ui) ? manifest.ui : []
   const files = []
   const seen = new Set()
@@ -144,24 +151,22 @@ function collectUi(manifest) {
     if (!dir) throw new Error(`pack.json 的 ui 页面 ${page.id} 的 entry 必须在子目录里（${entry}）`)
     if (seen.has(dir)) continue
     seen.add(dir)
-    files.push(...collectDir('ui', `ui/${dir}`))
-  }
-  const documentation = join(PLUGIN_DIR, 'ui', 'provider-docs.json')
-  if (existsSync(documentation) && statSync(documentation).isFile()) {
-    files.push({ name: 'ui/provider-docs.json', data: readFileSync(documentation), executable: false })
+    files.push(...collectDir('ui', `ui/${dir}`, base))
   }
   return files
 }
 
 function parseArgs(argv) {
-  const options = { out: join(PLUGIN_DIR, 'dist'), build: true, target: '' }
+  const options = { out: join(PLUGIN_DIR, 'dist'), build: true, target: '', pack: PLUGIN_DIR, crate: 'agent2api-providers' }
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (arg === '--out') options.out = resolve(argv[++index] || options.out)
     else if (arg === '--target') options.target = argv[++index] || ''
+    else if (arg === '--pack') options.pack = resolve(argv[++index] || options.pack)
+    else if (arg === '--crate') options.crate = argv[++index] || options.crate
     else if (arg === '--skip-build') options.build = false
     else if (arg === '--help' || arg === '-h') {
-      console.log('用法: node scripts/pack.mjs [--target <三元组>] [--out <目录>] [--skip-build]')
+      console.log('用法: node scripts/pack.mjs [--target <三元组>] [--out <目录>] [--pack <包目录>] [--crate <crate 名>] [--skip-build]')
       process.exit(0)
     } else {
       console.error(`未知参数：${arg}`)
@@ -236,7 +241,7 @@ function writeZip(entries) {
 
     const central = Buffer.alloc(46)
     central.writeUInt32LE(0x02014b50, 0)
-    central.writeUInt16LE((3 << 8) | 20, 4) // Unix 属性，ZIP 2.0
+    central.writeUInt16LE(20, 4) // 创建版本
     central.writeUInt16LE(20, 6) // 解压所需版本
     central.writeUInt16LE(0x0800, 8)
     central.writeUInt16LE(0, 10)
@@ -281,7 +286,7 @@ function main() {
   // ── 先校验清单（便宜），再编 / 找二进制（贵）─────────────────
   // 顺序反过来的话，`--target` 写错时用户看到的是「找不到 release 二进制」，
   // 会以为是没编过，实际上是这个平台压根没在 pack.json 里声明。
-  const manifestPath = join(PLUGIN_DIR, 'pack.json')
+  const manifestPath = join(options.pack, 'pack.json')
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const declared = manifest.entry?.[target]
   if (!declared) {
@@ -289,9 +294,10 @@ function main() {
     console.error(`[pack] 现有条目：${Object.keys(manifest.entry || {}).join(', ') || '(空)'}`)
     process.exit(1)
   }
-  const expectedName = binaryName(target)
-  if (declared.split('/').pop() !== expectedName) {
-    console.error(`[pack] pack.json 的 entry（${declared}）与二进制名（${expectedName}）不一致`)
+  const declaredName = declared.split('/').pop()
+  const extension = expectedExtension(target)
+  if (extension ? !declaredName.endsWith(extension) : declaredName.endsWith('.exe')) {
+    console.error(`[pack] pack.json 的 entry（${declared}）与目标平台（${target}）的二进制扩展名不一致`)
     process.exit(1)
   }
 
@@ -299,25 +305,20 @@ function main() {
   // 目标 != 宿主 → 传 --target，产物在 target/<triple>/release/。
   // 路径必须按这个规则取：交叉编译时 target/release/ 里是宿主架构的旧产物，
   // 拿错会把宿主的二进制打进别的平台的包里（能装、能验签、跑起来 exec format error）。
-  // 独占最终构建可使用新的 CARGO_TARGET_DIR；打包必须取同一目录的真实产物，
-  // 不能退回插件默认 target/ 读取旧二进制。相对目录与 cargo cwd 保持一致。
-  const targetDir = process.env.CARGO_TARGET_DIR
-    ? resolve(PLUGIN_DIR, process.env.CARGO_TARGET_DIR)
-    : join(PLUGIN_DIR, 'target')
   const native = target === host
   const exe = native
-    ? join(targetDir, 'release', binaryName(target))
-    : join(targetDir, target, 'release', binaryName(target))
+    ? join(PLUGIN_DIR, 'target', 'release', declaredName)
+    : join(PLUGIN_DIR, 'target', target, 'release', declaredName)
 
   if (options.build) {
-    const args = ['build', '--release', '-p', 'agent2api-providers']
+    const args = ['build', '--release', '-p', options.crate]
     if (!native) args.push('--target', target)
     console.log(`[pack] 编译 release 产物（cargo ${args.join(' ')}）…`)
     execFileSync('cargo', args, { cwd: PLUGIN_DIR, stdio: 'inherit' })
   }
   if (!existsSync(exe)) {
     console.error(`[pack] 找不到 release 二进制：${exe}`)
-    console.error(`[pack] 先跑一次 \`cd ${PLUGIN_DIR} && cargo build --release${native ? '' : ` --target ${target}`}\`，或去掉 --skip-build`)
+    console.error(`[pack] 先跑一次 \`cd ${PLUGIN_DIR} && cargo build --release -p ${options.crate}${native ? '' : ` --target ${target}`}\`，或去掉 --skip-build`)
     process.exit(1)
   }
 
@@ -326,13 +327,12 @@ function main() {
   mkdirSync(options.out, { recursive: true })
 
   const binary = readFileSync(exe)
-  const icons = collectIcons(manifest)
-  const ui = collectUi(manifest)
+  const icons = collectIcons(manifest, options.pack)
+  const ui = collectUi(manifest, options.pack)
   const zip = writeZip([
     { name: 'pack.json', data: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, 'utf8'), executable: false },
     ...icons,
     ...ui,
-    ...collectDir('licenses', 'licenses'),
     { name: declared, data: binary, executable: true },
   ])
   writeFileSync(zipPath, zip)

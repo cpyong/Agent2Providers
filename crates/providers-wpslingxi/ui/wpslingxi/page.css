@@ -1,0 +1,345 @@
+/*
+ * WPS 灵犀页面的样式。
+ *
+ * 色板与圆角全部取网关 `/plugins/runtime/*` 里的令牌（`--bg` / `--text` /
+ * `--border` / `--primary` …），每一处都带中性兜底值 —— 令牌缺失时页面
+ * 仍然是可读的黑白布局，而不是一片透明。
+ */
+
+.lx-shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lx-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lx-head h1 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.lx-sub {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2, #6b7280);
+}
+
+.lx-sub code,
+.lx-hint code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: .95em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-2, #f3f4f6);
+}
+
+.lx-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lx-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lx-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3, #9ca3af);
+}
+
+.lx-right {
+  margin-left: auto;
+}
+
+.lx-hint {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-2, #6b7280);
+}
+
+.lx-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.lx-field > span {
+  font-size: 12px;
+  color: var(--text-2, #6b7280);
+}
+
+.lx-field input,
+.lx-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text, #111827);
+  background: var(--control-bg, var(--bg, #fff));
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: var(--radius-sm, 8px);
+  outline: none;
+}
+
+.lx-field textarea {
+  resize: vertical;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  line-height: 1.5;
+}
+
+.lx-field input:focus,
+.lx-field textarea:focus {
+  border-color: var(--primary, #2563eb);
+  box-shadow: 0 0 0 3px var(--primary-soft, rgba(37, 99, 235, .18));
+}
+
+.lx-btn {
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text, #111827);
+  background: var(--surface-2, #f3f4f6);
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: var(--radius-sm, 8px);
+  white-space: nowrap;
+}
+
+.lx-btn:hover:not(:disabled) {
+  background: var(--row-hover, #eceef1);
+}
+
+.lx-btn:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.lx-btn-primary {
+  color: var(--primary-fg, #fff);
+  background: var(--primary, #2563eb);
+  border-color: transparent;
+}
+
+.lx-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover, #1d4ed8);
+}
+
+.lx-btn-danger {
+  color: var(--danger, #dc2626);
+  border-color: var(--danger-bd, rgba(220, 38, 38, .35));
+  background: transparent;
+}
+
+.lx-btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft, rgba(220, 38, 38, .08));
+}
+
+.lx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.lx-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-row-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-3, #9ca3af);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lx-empty {
+  font-size: 12.5px;
+  color: var(--text-3, #9ca3af);
+}
+
+.lx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.lx-chip {
+  padding: 2px 7px;
+  font-size: 12px;
+  color: var(--text-2, #374151);
+  background: var(--surface-2, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+}
+
+.lx-chip[data-off='1'] {
+  color: var(--text-3, #9ca3af);
+  text-decoration: line-through;
+}
+
+.lx-foot {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-3, #9ca3af);
+}
+
+.lx-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(680px, calc(100vw - 48px));
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--text, #111827);
+  background: var(--surface-raised, var(--surface, #fff));
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+  z-index: 20;
+}
+
+.lx-toast[data-kind='bad'] {
+  color: var(--danger, #dc2626);
+  border-color: var(--danger-bd, rgba(220, 38, 38, .4));
+}
+
+/* ── 浏览器登录 ─────────────────────────────────────────────── */
+
+.lx-login {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lx-btn-lg {
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.lx-login-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2, #6b7280);
+  background: var(--surface-2, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.lx-spinner {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  box-sizing: border-box;
+  border: 2px solid var(--border, #d1d5db);
+  border-top-color: var(--primary, #2563eb);
+  border-radius: 50%;
+  animation: lx-spin .8s linear infinite;
+}
+
+@keyframes lx-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 不给 <details> 改 display：浏览器自己管未展开内容的隐藏，
+   这里只调间距，免得折叠态把表单漏出来。 */
+.lx-details {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.lx-details > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-2, #6b7280);
+  list-style: none;
+}
+
+.lx-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lx-details > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform .15s ease;
+}
+
+.lx-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.lx-details > summary:hover {
+  color: var(--primary, #2563eb);
+}
+
+.lx-details > .lx-hint,
+.lx-details > .lx-field,
+.lx-details > .lx-grid {
+  margin-top: 10px;
+}

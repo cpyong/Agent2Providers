@@ -1,0 +1,23 @@
+[package]
+name = "agent2api-providers-todayai"
+description = "Agent2API Today AI 提供商插件包（独立发布）"
+version = "0.1.5"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[[bin]]
+name = "agent2api-todayai"
+path = "src/main.rs"
+
+[dependencies]
+# 同仓库内的两个契约 crate（工作区成员）
+agent2api-provider-protocol = { path = "../provider-protocol" }
+agent2api-provider-sdk = { path = "../provider-sdk" }
+serde_json = "1"
+# 账号级串行锁（模型是账号级设置，见 `todayai/chat.rs`）
+tokio = { version = "1", features = ["sync"] }
+# 出网栈与合集包一致：rustls，不依赖系统 openssl
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "socks"] }

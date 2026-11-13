@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today AI 账号</title>
+<!--
+  Today AI 账号页（插件自有页面）。
+
+  ── 为什么要有这一页 ──────────────────────────────────────────
+  本家的账号只能靠「手机号 + 短信验证码」拿到，而网关 3.3.0 的
+  「添加账号」弹窗是按**内置家清单**渲染的（`BUILTIN_CONFIGS` + `configOf`，
+  见网关 `ui-islands/src/islands/add-account-configs.ts`）：插件家的 id 不在
+  那张表里，弹窗只显示「账号添加功能即将上线」。这是网关侧的固定行为，
+  插件装得再好也改不了它。
+
+  于是把「添加账号」做成自带的页面：侧边栏 → Today AI 账号 → 手机号 →
+  验证码 → 添加。加完的账号与内置家完全同权（选路、限额、转发都走同一张表）。
+
+  ── 数据从哪来 ──────────────────────────────────────────────
+  只调网关的 `/api/*`（与内置页同一条管理 API）：`/api/accounts` 加 / 删，
+  `/api/session` 读列表，`/api/models/*` 刷新与查看目录。发码与验证码登录
+  由插件进程代打上游 —— 页面**不直接**连 todayai（上游不给浏览器 CORS，
+  而且 `Origin` 头必须由插件侧决定）。
+
+  ── 样式与凭证 ──────────────────────────────────────────────
+  · `/plugins/runtime/*` 是网关出的设计令牌与组件样式（与内置页同一份色板）；
+  · 凭证两条路：web 面板同源 cookie；桌面端 / 手机由宿主 postMessage 递 headers
+    （见 api.js 的注释）。
+
+  页面保持**无构建步骤**（原生 ES module）：插件包是要能被任意网关装载的
+  静态资源，多一个 npm 产物就多一层「升级时忘打包」的风险。
+-->
+<link rel="stylesheet" href="/plugins/runtime/theme.css">
+<link rel="stylesheet" href="/plugins/runtime/islands/ui.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div class="ta-shell">
+  <header class="ta-head">
+    <div>
+      <h1>Today AI</h1>
+      <p class="ta-sub">手机号 + 短信验证码登录；访问令牌由插件自动续期，无需重登。</p>
+    </div>
+    <button class="ta-btn" id="reload">刷新</button>
+  </header>
+
+  <!-- ── 添加账号 ───────────────────────────────────────────── -->
+  <section class="ta-card">
+    <h2>添加账号</h2>
+    <p class="ta-hint">
+      网关内置的「添加账号」弹窗还不支持插件提供商，请在本页添加。添加后账号会
+      立刻参与路由，模型清单也会自动刷新。
+    </p>
+
+    <div class="ta-grid">
+      <label class="ta-field">
+        <span>手机号</span>
+        <input id="phone" inputmode="numeric" autocomplete="tel" placeholder="11 位中国大陆手机号">
+      </label>
+      <label class="ta-field ta-field-code">
+        <span>验证码</span>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位数字">
+      </label>
+      <button class="ta-btn ta-btn-ghost" id="send">发送验证码</button>
+    </div>
+
+    <div class="ta-grid">
+      <label class="ta-field">
+        <span>备注名（可选）</span>
+        <input id="name" placeholder="留空按手机号自动命名">
+      </label>
+      <button class="ta-btn ta-btn-primary" id="add">添加账号</button>
+    </div>
+
+    <details class="ta-details">
+      <summary>已有登录令牌？直接粘贴</summary>
+      <p class="ta-hint">
+        粘贴 Better Auth 的会话令牌（`sessionToken`，可续期）或模型网关的
+        JWT（`accessToken`，到期需重登）。适合从另一台机器迁移。
+      </p>
+      <textarea id="token" rows="3" spellcheck="false" placeholder="sessionToken 或 JWT"></textarea>
+      <button class="ta-btn" id="add-token">用令牌添加</button>
+    </details>
+  </section>
+
+  <!-- ── 账号列表 ───────────────────────────────────────────── -->
+  <section class="ta-card">
+    <h2>账号 <span class="ta-count" id="account-count"></span></h2>
+    <div id="accounts" class="ta-list"></div>
+  </section>
+
+  <!-- ── 模型清单 ───────────────────────────────────────────── -->
+  <section class="ta-card">
+    <h2>
+      模型 <span class="ta-count" id="model-count"></span>
+      <button class="ta-btn ta-btn-ghost ta-right" id="refresh-models">刷新模型清单</button>
+    </h2>
+    <p class="ta-hint" id="model-hint"></p>
+    <div id="models" class="ta-chips"></div>
+  </section>
+
+  <div class="ta-toast" id="toast" hidden></div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

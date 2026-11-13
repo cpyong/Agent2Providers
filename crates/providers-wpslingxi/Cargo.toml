@@ -1,0 +1,30 @@
+[package]
+name = "agent2api-providers-wpslingxi"
+description = "Agent2API WPS 灵犀（lingxi）提供商插件包（独立发布）：模型代理 + 每日签到 + 智点余额"
+version = "0.1.1"
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[[bin]]
+name = "agent2api-wpslingxi"
+path = "src/main.rs"
+
+[dependencies]
+# 同仓库内的两个契约 crate（工作区成员）
+agent2api-provider-protocol = { path = "../provider-protocol" }
+agent2api-provider-sdk = { path = "../provider-sdk" }
+serde_json = "1"
+# 凭证身份的稳定指纹（wps_sid 不落日志、不进公开视图）；锁文件里已有 0.10
+sha2 = "0.10"
+# 按「账号 × 模型」缓存 run 时的并发单飞锁；浏览器登录还要起后台观察任务、
+# 连本地 CDP WebSocket，故补 rt / time / net / process 等 feature
+tokio = { version = "1", features = ["rt", "macros", "time", "sync", "process", "net", "io-util"] }
+# 浏览器登录：连本机 Chromium 的 CDP WebSocket 读 wps_sid（ws:// 明文回环）。
+# 只要 connect，不要 TLS：多带一组 rustls feature 会无谓地扩大依赖图。
+tokio-tungstenite = { version = "0.28", default-features = false, features = ["connect"] }
+futures-util = "0.3"
+# 出网栈与其余包一致：rustls，不依赖系统 openssl；stream 用于私有 SSE
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls", "socks"] }
