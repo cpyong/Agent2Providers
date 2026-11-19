@@ -4,8 +4,8 @@
 //! 网关 `https://api.todayai.cn` 只暴露 **`/v1/llm/models`**（OpenAI 的
 //! `/v1/models` 是 404），鉴权是 `Authorization: Bearer <jwt>`，令牌由账号
 //! 接口换发（见 `credentials.rs`）。响应是 `{models:[{modelId}, …]}`，
-//! 没有名称 / 能力位 / 上下文长度 —— 缺的字段按保守口径补（工具位与思考位
-//! 默认关：本家的转发通道是助理会话，给不出 `tool_calls`）。解析同时容忍
+//! 没有名称 / 能力位 / 上下文长度 —— 缺的字段按保守口径补（思考位默认关；
+//! 工具位由 `chat.rs` 的文本协议桥接提供，因此恒申报 true）。解析同时容忍
 //! `{data:[{id, …}]}` 与裸数组，免得上游哪天换成 OpenAI 形态就整份目录失效。
 //!
 //! ── 拉不到时不编模型名 ──────────────────────────────────────
@@ -92,11 +92,12 @@ fn map_entry(row: &Value) -> Option<Value> {
     let mut item = json!({
         "id": id,
         "name": name,
-        // 目录只给 `modelId`，没有任何能力位。默认按**保守口径**：工具位
-        // 与思考位都关 —— 本家的转发通道是助理会话，回答是成品文本，没有
-        // `tool_calls`，也没有独立的思考流（见 `chat.rs` 的模块头）。申报成
-        // 「支持」会让客户端发来工具定义却永远等不到调用。
-        "supportsToolCall": caps_bool(caps, "function_calling"),
+        // 目录只给 `modelId`，没有任何能力位。**工具位申报为 true**：
+        // 上游没有原生 `tool_calls`，但 `chat.rs` 做了文本协议桥接（注入
+        // 工具清单 → 解析 `<tool_call>` → 还原标准 `tool_calls` 帧）。
+        // 申报 false 的话客户端压根不会把工具定义发过来，Agent 模式会在
+        // 第一轮结束时停住。思考位仍按上游能力（默认 false）申报。
+        "supportsToolCall": true,
         "supportsReasoning": caps_bool(caps, "reasoning"),
     });
     if let Some(object) = item.as_object_mut() {

@@ -1,7 +1,7 @@
 [package]
 name = "agent2api-providers-todayai"
 description = "Agent2API Today AI 提供商插件包（独立发布）"
-version = "0.1.5"
+version = "0.1.8"
 edition.workspace = true
 rust-version.workspace = true
 license-file.workspace = true
